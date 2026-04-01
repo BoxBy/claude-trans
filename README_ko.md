@@ -28,62 +28,95 @@ npm link
 
 번역 레이어가 적용된 Claude Code를 띄우려면 `claude-trans` 또는 축약형 명령어인 `cts`를 실행하면 됩니다.
 
+**`claude`의 모든 CLI 플래그와 인자가 그대로 전달**되므로, `cts`는 `claude`의 완전한 대체제로 사용할 수 있습니다:
+
 ```bash
 # 번역 기능이 활성화된 상태로 Claude Code 실행
 cts
 
-# 다른 언어로 변경하여 실행
-cts --lang ja
+# 특정 모델 지정
+cts --model sonnet
 
-# 로컬의 Ollama 모델을 활용해 번역
-cts --ollama gemma3:4b
+# 출력 모드 (비대화형)
+cts -p "이 함수를 설명해줘"
+
+# 권한 승인 생략 (위험 모드)
+cts --dangerously-skip-permissions
+
+# 이전 대화 이어서
+cts --continue
+
+# claude의 다른 플래그도 그대로 사용 가능
+cts --allowedTools "Edit,Write,Bash" --model opus
+```
+
+### 설정
+
+번역 관련 설정은 Claude Code 내에서 슬래시 명령어로 대화형으로 변경합니다:
+
+```bash
+/ts-lang         # 타겟 번역 언어 변경 (ko, ja, zh, ...)
+/ts-provider     # 번역 제공자 변경 및 API 키 등록
+/ts-model        # 번역 모델 변경
 ```
 
 ## 번역 백엔드
 
-번역 작업을 처리할 다양한 백엔드를 자유롭게 선택할 수 있으며, Claude Code 내에서 언제든 슬래시 명령어로 교체할 수 있습니다.
-
 | 백엔드 | 설명 | API 키 |
 |--------|------|--------|
-| `claude` (기본) | Claude API (Haiku) 사용 | 설정 불필요 (보유중인 세션 키 자동 활용) |
-| `ollama` | 로컬 PC의 Ollama 네트워크 사용 | 불필요 |
-| `custom` | OpenAI / 구글 Gemini 등을 지원하는 범용 엔드포인트 | 엔드포인트별 API KEY 등록 필요 |
+| `claude` (기본) | Claude API (Haiku) 사용 | 설정 불필요 (세션 키 자동 활용) |
+| `ollama` | 로컬 PC의 Ollama 사용 | 불필요 |
+| `custom` | OpenAI / 구글 Gemini 등 OpenAI 호환 엔드포인트 | 엔드포인트별 API KEY 필요 |
 
-Claude Code 안에서 다음 슬래시 명령어를 쓰면 번역 제공자를 교체할 수 있습니다:
-```bash
-/ts-provider    # 번역 제공자 변경 및 커스텀 API 키 등록
-/ts-model       # 번역 모델명 변경
-```
+### Custom 엔드포인트 활용 (예: 구글 Gemini / OpenAI)
 
-### Custom 엔드포인트 활용 (예: 구글 Gemini / OpenAI 등)
-Google Gemini API, OpenAI 등 OpenAI-compatible 엔드포인트라면 무엇이든 커스텀으로 설정 가능합니다.
+Claude Code 안에서 `/ts-provider`를 실행하여 설정합니다. 입력된 URL은 자동으로 교정됩니다:
 
-```bash
-/ts-provider
-```
-입력된 URL은 똑똑하게 자동 교정됩니다:
 - `https://` 프로토콜이 누락된 경우 자동 보완
-- **Google Gemini**: 시스템 프롬프트(개발자 지시문)를 미지원하는 모델(`gemma-3-27b-it` 등)의 경우 400 에러를 뱉지 않도록 시스템 프롬프트를 자동으로 User 프롬프트 내부로 병합 전송
-- **OpenAI 호환 포맷**: `/v1/chat/completions` 경로 자동 처리
+- **Google Gemini**: 시스템 프롬프트를 지원하지 않는 모델(`gemma-3-27b-it` 등)의 경우 시스템 프롬프트를 User 프롬프트로 자동 병합하여 400 에러 방지
+- **OpenAI 호환**: `/v1/chat/completions` 경로 자동 처리
 
 ## 슬래시 명령어
-플러그인 설치 시 다음 슬래시 명령어들이 Claude Code 내에 자동으로 주입됩니다:
+
+세션 시작 시 다음 명령어들이 Claude Code에 자동으로 설치됩니다:
 
 | 명령어 | 설명 |
 |--------|------|
 | `/ts-show` | 자세한 번역 디버깅 정보 확인 (원문 ↔ 번역문) |
 | `/ts-hide` | 번역 정보 숨기기 모드 |
-| `/ts-provider` | 번역을 수행할 제공자(Provider)와 API KEY 재설정 |
+| `/ts-provider` | 번역 제공자(Provider)와 API KEY 재설정 |
 | `/ts-model` | 번역할 모델(Model) 지정 교체 |
 | `/ts-lang` | 타겟 번역 언어 변경 |
+| `/ts-thinking` | 확장 사고(Extended Thinking) 번역 토글 (`on`/`off`, 기본값: `off`) |
+| `/ts-color` | 상태 표시줄 색상 테마 변경 |
 
 ## 상태 표시줄 (Statusline) 지원
-claude-trans는 호환되는 Statusline 출력 시스템을 도입하여 화면 하단에서 어떤 번역 모델이 사용 중인지와 실시간 번역 프리뷰를 우아하게 제공합니다:
+
+claude-trans는 Claude Code의 기본 상태 표시줄에 후킹하여 실시간 번역 프리뷰를 표시합니다. 기존에 사용 중이던 상태 표시줄(예: OMC)은 자동으로 백업되어 아래에 함께 표시됩니다.
 
 ```
-[ts] gemma-3-27b-it | ↳ 안녕하세요? → Hello? 
+[ts] gemma-3-27b-it 안녕하세요? → Hello?
+↳ The function calculates → 이 함수는 계산합니다
 ```
-기존 터미널 UI 프레임워크와 충돌 없이 깔끔하게 표시됩니다.
+
+상태 표시줄에 표시되는 정보:
+- **태그 & 모델**: `[ts]` 뒤에 현재 사용 중인 번역 모델명
+- **입력 라인**: 사용자가 입력한 원문 → Claude에게 전달되는 영어 번역
+- **출력 라인** (`↳`): Claude의 영어 응답 → 사용자 언어로 재번역된 결과
+
+사용자 입력은 노란색, Claude 응답은 시안색, 화살표는 흐리게 표시되며, 긴 텍스트는 자동으로 축약됩니다. 색상 테마는 `/ts-color`로 변경할 수 있습니다.
+
+## 종료 시 자동 정리
+
+`cts`를 정상적으로 종료하면, 세션 중에 주입된 모든 아티팩트가 자동으로 정리됩니다:
+
+- **상태 표시줄 브릿지 스크립트** — `~/.claude/`에서 삭제
+- **원래 상태 표시줄 설정** — 백업에서 복원
+- **슬래시 명령어** (`ts-*.md`) — `~/.claude/commands/`에서 삭제
+- **상태 파일** — `~/.claude/`에서 삭제
+
+어떤 잔여물도 남지 않으며, Claude Code 환경이 원래 상태로 복원됩니다.
 
 ## 라이선스
+
 MIT

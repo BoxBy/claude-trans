@@ -28,46 +28,57 @@ npm link
 
 You can launch Claude Code with the translation layer using either `claude-trans` or the shorter alias `cts`.
 
+**All Claude CLI flags and arguments are passed through**, so you can use `cts` as a drop-in replacement for `claude`:
+
 ```bash
 # Launch Claude Code with translation enabled
 cts
 
-# Change target language
-cts --lang ja
+# Use a specific model
+cts --model sonnet
 
-# Translate using local Ollama model
-cts --ollama gemma3:4b
+# Print mode (non-interactive)
+cts -p "Explain this function"
+
+# Skip permissions (dangerous mode)
+cts --dangerously-skip-permissions
+
+# Continue last conversation
+cts --continue
+
+# Any other claude flags work as-is
+cts --allowedTools "Edit,Write,Bash" --model opus
+```
+
+### Configuration
+
+Translation settings are configured interactively via slash commands inside Claude Code:
+
+```bash
+/ts-lang         # Change target language (ko, ja, zh, ...)
+/ts-provider     # Configure translation provider and API keys
+/ts-model        # Change translation model
 ```
 
 ## Translation Backends
-
-A variety of backends are supported for the actual translation. Switching backends happens within Claude Code via slash commands.
 
 | Backend | Description | API Key |
 |--------|------|--------|
 | `claude` (default) | Uses Claude API (Haiku) | Reuses Claude Code session key automatically |
 | `ollama` | Local Ollama instance | Not required |
-| `custom` | OpenAI / Google Gemini compatible endpoints | Native depending on endpoint |
-
-You can interactively change your backend using slash commands inside Claude Code:
-```bash
-/ts-provider    # Configure translation provider and API keys
-/ts-model       # Change translation model
-```
+| `custom` | OpenAI / Google Gemini compatible endpoints | Depends on endpoint |
 
 ### Using Custom Endpoints (e.g., Google Gemini / OpenAI)
-You can use any OpenAI-compatible endpoint, including Google Gemini and local LLM servers.
 
-```bash
-/ts-provider
-```
-The endpoint URLs are automatically corrected and parsed:
+Run `/ts-provider` inside Claude Code to configure. The endpoint URLs are automatically corrected:
+
 - `https://` is prepended if the scheme is missing.
-- **Google Gemini**: Automatically routes properly avoiding system prompt issues (e.g., `gemma-3-27b-it` missing developer instructions).
+- **Google Gemini**: Automatically routes properly, avoiding system prompt issues (e.g., `gemma-3-27b-it` missing developer instructions).
 - **OpenAI Compatible**: `/v1/chat/completions` paths are automatically handled.
 
 ## Slash Commands
-The following commands are automatically installed and available within Claude Code:
+
+The following commands are automatically installed on session start and available within Claude Code:
 
 | Command | Description |
 |--------|------|
@@ -76,14 +87,36 @@ The following commands are automatically installed and available within Claude C
 | `/ts-provider` | Configure translation provider and set custom API keys |
 | `/ts-model` | Change translation model |
 | `/ts-lang` | Change translation target language |
+| `/ts-thinking` | Toggle extended thinking translation (`on`/`off`, default: `off`) |
+| `/ts-color` | Change statusline color theme |
 
 ## Statusline Integration
-claude-trans cleanly integrates into Claude Code's native statusline:
+
+claude-trans hooks into Claude Code's native statusline and displays real-time translation preview. Your existing statusline (e.g., OMC) is automatically backed up and displayed below.
 
 ```
-[ts] gemma-3-27b-it | ↳ 안녕하세요? → Hello? 
+[ts] gemma-3-27b-it 안녕하세요? → Hello?
+↳ The function calculates → 이 함수는 계산합니다
 ```
-It displays properly formatted text and doesn't interfere with the main UI.
+
+The statusline shows:
+- **Tag & model**: `[ts]` followed by the active translation model name
+- **Input line**: Your original text → English translation (sent to Claude)
+- **Output line** (`↳`): Claude's English response → translated back to your language
+
+Text is color-coded — user input in yellow, Claude's text in cyan, arrows in dim — and long text is automatically truncated. Colors can be customized via `/ts-color`.
+
+## Clean Exit
+
+When you exit `cts` normally, all injected artifacts are automatically cleaned up:
+
+- **Statusline bridge script** removed from `~/.claude/`
+- **Original statusline settings** restored from backup
+- **Slash commands** (`ts-*.md`) removed from `~/.claude/commands/`
+- **Status file** removed from `~/.claude/`
+
+No residue is left behind — your Claude Code environment returns to its original state.
 
 ## License
+
 MIT
