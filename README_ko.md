@@ -1,5 +1,7 @@
 # claude-trans (cts)
 
+![alt text](image.png)
+
 Claude Code를 위한 투명 번역 레이어 — 사용자는 모국어로 대화하고, Claude는 영어로 추론합니다.
 
 [English](README.md)

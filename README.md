@@ -1,5 +1,7 @@
 # claude-trans (cts)
 
+![alt text](image.png)
+
 Transparent translation layer for Claude Code — interact in your language, while Claude reasons in English.
 
 [한국어](README_ko.md)
