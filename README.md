@@ -14,15 +14,12 @@ Your input gets translated to English before reaching the API, and the response 
 ## Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/BoxBy/claude-ts.git
-cd claude-ts
-
-# Install globally via npm
-npm link
+npm install -g claude-trans
 ```
 
-*Requirements: [Node.js](https://nodejs.org/) (v18+) and [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)*
+*Requirements: [Node.js](https://nodejs.org/) (v18+) and [Claude Code CLI via npm](https://docs.anthropic.com/en/docs/claude-code) (`npm install -g @anthropic-ai/claude-code`)*
+
+> **Note:** The native installer (`curl -fsSL https://claude.ai/install.sh | bash`) is **not supported**. Claude Code must be installed via npm for the translation hook to work.
 
 ## Usage
 
@@ -82,8 +79,7 @@ The following commands are automatically installed on session start and availabl
 
 | Command | Description |
 |--------|------|
-| `/ts-show` | Display translation debug info (Original ↔ Translated pairs) |
-| `/ts-hide` | Hide translation info (quiet mode) |
+| `/ts-show` | Show translation status & toggle preview visibility (`on`/`off`) |
 | `/ts-provider` | Configure translation provider and set custom API keys |
 | `/ts-model` | Change translation model |
 | `/ts-lang` | Change translation target language |
