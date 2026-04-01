@@ -1,0 +1,32 @@
+{
+  "name": "claude-trans",
+  "version": "0.3.0",
+  "description": "Transparent translation layer for Claude Code — interact in your language, Claude reasons in English",
+  "main": "lib/index.cjs",
+  "bin": {
+    "claude-trans": "bin/cli.cjs",
+    "cts": "bin/cli.cjs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "claude",
+    "translation",
+    "proxy",
+    "ai",
+    "llm"
+  ],
+  "files": [
+    "bin",
+    "lib",
+    "README.md",
+    "README_ko.md",
+    "LICENSE"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
