@@ -65,8 +65,57 @@ function ensureSettings() {
     }
 }
 
+// ── Check if Claude Code is installed via npm ──────────────────────────────────
+function checkClaudeInstall() {
+    try {
+        const { execSync } = require("child_process");
+        let claudePath;
+        if (process.platform === "win32") {
+            const result = execSync("where claude 2>nul", { encoding: "utf8" }).trim();
+            // Prefer .cmd file (npm) over .exe (native)
+            const lines = result.split("\n").map(l => l.trim()).filter(Boolean);
+            claudePath = lines.find(l => l.endsWith(".cmd") || l.endsWith(".ps1")) || lines[0];
+        } else {
+            claudePath = execSync("which claude 2>/dev/null", { encoding: "utf8" }).trim();
+        }
+        if (claudePath) {
+            const content = fs.readFileSync(claudePath, "utf8").slice(0, 100);
+            if (!content.startsWith("#!") && !content.startsWith("@") && !content.startsWith("::")) {
+                console.error("[claude-trans] WARNING: Claude Code appears to be a native binary.");
+                console.error("[claude-trans] claude-trans requires the npm version. Install with:");
+                console.error("[claude-trans]   npm install -g @anthropic-ai/claude-code");
+            }
+        }
+    } catch {}
+}
+
+// ── Check for npm updates ──────────────────────────────────────────────────────
+function checkUpdate() {
+    try {
+        const https = require("https");
+        const pkg = require(path.join(__dirname, "..", "package.json"));
+        const req = https.get(`https://registry.npmjs.org/${pkg.name}/latest`, { timeout: 3000 }, (res) => {
+            let data = "";
+            res.on("data", chunk => data += chunk);
+            res.on("end", () => {
+                try {
+                    const latest = JSON.parse(data).version;
+                    if (latest !== pkg.version) {
+                        console.error(`[claude-trans] Update available: ${pkg.version} → ${latest}`);
+                        console.error(`[claude-trans] Run: npm update -g ${pkg.name}`);
+                    }
+                } catch {}
+            });
+        });
+        req.on("error", () => {});
+        req.on("timeout", () => req.destroy());
+    } catch {}
+}
+
 syncCommands();
 ensureSettings();
+checkClaudeInstall();
+checkUpdate();
 
 // ── Clean up stale status from previous (crashed/force-closed) session ──────
 try {

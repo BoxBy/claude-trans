@@ -4,7 +4,7 @@
 
 Transparent translation layer for Claude Code — interact in your language, while Claude reasons in English.
 
-[한국어](README_ko.md)
+[한국어](README_ko.md) · [GitHub](https://github.com/BoxBy/claude-ts) · [npm](https://www.npmjs.com/package/claude-trans)
 
 ## Motivation
 
