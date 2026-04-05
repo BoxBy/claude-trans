@@ -128,72 +128,159 @@ function restoreSettings() {
     try {
         const settingsPath = path.join(claudeDir, "settings.json");
         const origPath = path.join(claudeDir, "claude-trans-orig-statusline.json");
+        const origApiUrlPath = path.join(claudeDir, "claude-trans-orig-api-url.json");
         const bridgePath = path.join(claudeDir, "claude-trans-statusline.cjs");
         const targetCmd = `node ${bridgePath.replace(/\\/g, "/")}`;
 
-        if (fs.existsSync(origPath) && fs.existsSync(settingsPath)) {
-            const backup = JSON.parse(fs.readFileSync(origPath, "utf8"));
+        if (fs.existsSync(settingsPath)) {
             const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
 
-            // Only restore if settings are still pointing to our bridge
-            if (settings.statusLine && settings.statusLine.command === targetCmd) {
-                settings.statusLine = backup;
-                fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
-                console.error("[claude-trans] Restored original statusline in settings.json");
+            // Restore statusline
+            if (fs.existsSync(origPath)) {
+                const backup = JSON.parse(fs.readFileSync(origPath, "utf8"));
+                if (settings.statusLine && settings.statusLine.command === targetCmd) {
+                    settings.statusLine = backup;
+                }
+                fs.unlinkSync(origPath);
+            } else {
+                if (settings.statusLine && settings.statusLine.command === targetCmd) {
+                    delete settings.statusLine;
+                }
             }
-        } else if (!fs.existsSync(origPath) && fs.existsSync(settingsPath)) {
-            // If there was no backup, it means there was no original statusLine. Remove ours.
-            const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-            if (settings.statusLine && settings.statusLine.command === targetCmd) {
-                delete settings.statusLine;
-                fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
-                console.error("[claude-trans] Removed statusline bridge from settings.json");
+
+            // Restore API URL
+            if (fs.existsSync(origApiUrlPath)) {
+                const urlBackup = JSON.parse(fs.readFileSync(origApiUrlPath, "utf8"));
+                if (settings.env) {
+                    settings.env.ANTHROPIC_BASE_URL = urlBackup.ANTHROPIC_BASE_URL;
+                }
+                fs.unlinkSync(origApiUrlPath);
+                console.error("[claude-trans] Restored original API URL in settings.json");
             }
+
+            fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
+            console.error("[claude-trans] Restored settings.json");
         }
     } catch (e) {
         console.error("[claude-trans] Failed to restore settings:", e.message);
     }
 }
 
-// ── Environment setup for Claude Code ─────────────────────────────────────────
-const env = { 
-  ...process.env, 
-  NODE_OPTIONS: `${process.env.NODE_OPTIONS || ""} --require "${loaderPath}"` 
-};
-
+// ── Check for --use-proxy flag ─────────────────────────────────────────────────
 const args = process.argv.slice(2);
+const useProxy = args.includes("--use-proxy");
+const claudeArgs = args.filter(a => a !== "--use-proxy");
 
-const child = spawn("claude", args, {
-  stdio: "inherit",
-  shell: true,
-  env: env
-});
+if (useProxy) {
+  // ── Proxy mode: for native/non-npm Claude Code installs ───────────────────
+  const net = require("net");
 
-// Pass through signals gracefully
-['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(sig => {
-    process.on(sig, () => {
-        child.kill(sig);
+  function findFreePort() {
+    return new Promise((resolve, reject) => {
+      const s = net.createServer();
+      s.listen(0, () => { const p = s.address().port; s.close(() => resolve(p)); });
+      s.on("error", reject);
     });
-});
+  }
 
-child.on("exit", (code) => {
-  restoreSettings();
-  // Remove all claude-trans artifacts
+  (async () => {
+    const port = await findFreePort();
+    // Detect real API URL from: env var → settings.json → default
+    let realApiUrl = process.env.ANTHROPIC_BASE_URL;
+    const settingsPath = path.join(claudeDir, "settings.json");
+    const origApiUrlPath = path.join(claudeDir, "claude-trans-orig-api-url.json");
+    if (!realApiUrl) {
+      try {
+        if (fs.existsSync(settingsPath)) {
+          const s = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+          realApiUrl = s.env?.ANTHROPIC_BASE_URL;
+        }
+      } catch {}
+    }
+    if (!realApiUrl) realApiUrl = "https://api.anthropic.com";
+    const { createProxy } = require(path.join(__dirname, "..", "lib", "proxy-server.cjs"));
+    const server = createProxy(realApiUrl);
+
+    server.listen(port, "127.0.0.1", async () => {
+      console.error(`[claude-trans] Proxy mode: http://localhost:${port} → ${realApiUrl}`);
+
+      const proxyUrl = `http://localhost:${port}`;
+
+      // Patch settings.json env to point to our proxy (Claude Code reads settings.json env)
+      try {
+        if (fs.existsSync(settingsPath)) {
+          const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+          if (settings.env?.ANTHROPIC_BASE_URL && settings.env.ANTHROPIC_BASE_URL !== proxyUrl) {
+            // Backup original API URL
+            fs.writeFileSync(origApiUrlPath, JSON.stringify({ ANTHROPIC_BASE_URL: settings.env.ANTHROPIC_BASE_URL }), "utf8");
+            // Patch settings.json
+            settings.env.ANTHROPIC_BASE_URL = proxyUrl;
+            fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
+            console.error(`[claude-trans] Patched settings.json ANTHROPIC_BASE_URL → ${proxyUrl}`);
+          }
+        }
+      } catch (e) {
+        console.error(`[claude-trans] Failed to patch settings.json: ${e.message}`);
+      }
+
+      // Small delay to ensure settings.json write is flushed
+      await new Promise(r => setTimeout(r, 200));
+
+      const proxyEnv = { ...process.env, ANTHROPIC_BASE_URL: proxyUrl };
+      const child = spawn("claude", claudeArgs, { stdio: "inherit", shell: true, env: proxyEnv });
+
+      ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig => {
+        process.on(sig, () => child.kill(sig));
+      });
+
+      child.on("exit", (code) => {
+        server.close();
+        restoreSettings();
+        cleanup();
+        process.exit(code || 0);
+      });
+    });
+  })();
+} else {
+  // ── Default mode: fetch patching via NODE_OPTIONS (npm install) ────────────
+  const env = {
+    ...process.env,
+    NODE_OPTIONS: `${process.env.NODE_OPTIONS || ""} --require "${loaderPath}"`
+  };
+
+  const child = spawn("claude", claudeArgs, {
+    stdio: "inherit",
+    shell: true,
+    env: env
+  });
+
+  ["SIGINT", "SIGTERM", "SIGQUIT"].forEach(sig => {
+    process.on(sig, () => child.kill(sig));
+  });
+
+  child.on("exit", (code) => {
+    restoreSettings();
+    cleanup();
+    process.exit(code || 0);
+  });
+}
+
+function cleanup() {
   try {
-    // Status file
     const stPath = path.join(claudeDir, "claude-trans-status.json");
     if (fs.existsSync(stPath)) fs.unlinkSync(stPath);
-    // Slash commands
     const cmdDir = path.join(claudeDir, "commands");
     if (fs.existsSync(cmdDir)) {
       fs.readdirSync(cmdDir).filter(f => f.startsWith("ts-") && f.endsWith(".md")).forEach(f => {
         fs.unlinkSync(path.join(cmdDir, f));
       });
     }
-    // Bridge script
     const bridge = path.join(claudeDir, "claude-trans-statusline.cjs");
     if (fs.existsSync(bridge)) fs.unlinkSync(bridge);
+    const proxyLog = path.join(claudeDir, "claude-trans-proxy.log");
+    if (fs.existsSync(proxyLog)) fs.unlinkSync(proxyLog);
+    const origApiUrl = path.join(claudeDir, "claude-trans-orig-api-url.json");
+    if (fs.existsSync(origApiUrl)) fs.unlinkSync(origApiUrl);
   } catch {}
-  process.exit(code || 0);
-});
+}
 
