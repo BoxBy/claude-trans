@@ -1,21 +1,41 @@
 ---
-description: Configure translation provider (claude, ollama, custom) and API key
+description: Configure translation provider and API key
 ---
 
-# /ts-provider [provider]
+# /ts-provider [url]
 
-When this command is invoked:
+## If a URL argument is provided
 
-1. If no `provider` argument is given, help the user choose from:
-   - `claude` (default, uses Haiku)
-   - `ollama` (local Ollama server)
-   - `custom` (OpenAI / Google Gemini compatible endpoint)
+Skip provider selection — go directly to custom setup with that URL.
 
-2. If the user selects `custom`:
-   - Ask for the endpoint URL (e.g., `https://generativelanguage.googleapis.com`).
-   - Ask for the API key.
-   - Allow the user to specify a model name, or show a list (e.g., `gemma-3-27b-it`) for selection.
+## If no argument
 
-3. Update the `backend`, `custom_endpoint`, and `custom_model` fields in `~/.claude/claude-trans.json`.
-4. Store the API key securely in the `custom_apiKey` field of `~/.claude/claude-trans-auth.json`.
-5. After configuration is complete, respond with: "Translation provider changed to [provider]."
+Use AskUserQuestion with these options:
+- "claude (Anthropic Haiku — default)"
+- "custom (OpenAI / Google Gemini compatible)"
+
+## For "claude"
+
+1. Open `~/.claude/claude-trans-auth.json` in the editor so the user can add their `apiKey`.
+2. Set `backend` to `"claude"` in `~/.claude/claude-trans.json`.
+3. Respond ONLY: "Provider set to **claude**."
+
+## For "custom"
+
+1. If no URL argument was given, ask: "Enter the endpoint URL:" (e.g. `https://generativelanguage.googleapis.com`).
+2. Open `~/.claude/claude-trans-auth.json` in the editor so the user can add their `custom_apiKey`.
+3. After the user confirms, fetch models by running:
+   ```bash
+   node "$(npm root -g)/claude-trans/lib/fetch-models.cjs" "<endpoint_url>"
+   ```
+4. If models are listed, use AskUserQuestion with the model names as options. If fetching fails, ask the user to type the model name.
+5. Save to `~/.claude/claude-trans.json`:
+   - `backend`: `"custom"`
+   - `custom_endpoint`: the URL
+   - `model`: the selected model name
+6. Respond ONLY: "Provider set to **custom** (model: <model_name>)."
+
+## Rules
+- Do NOT store endpoint or model in `~/.claude/claude-trans-auth.json`. That file stores API keys only.
+- Do NOT ask extra questions.
+- Do NOT show verbose output. One-line response only.
