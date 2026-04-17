@@ -166,8 +166,19 @@ function restoreSettings() {
 
 // ── Check for --use-proxy flag ─────────────────────────────────────────────────
 const args = process.argv.slice(2);
-const useProxy = args.includes("--use-proxy");
-const claudeArgs = args.filter(a => a !== "--use-proxy");
+let useProxy = args.includes("--use-proxy") || args.includes("--proxy");
+const claudeArgs = args.filter(a => a !== "--use-proxy" && a !== "--proxy");
+
+// Check config for default mode
+if (!useProxy) {
+  try {
+    const cfgPath = path.join(claudeDir, "claude-trans.json");
+    if (fs.existsSync(cfgPath)) {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+      if (cfg.mode === "proxy") useProxy = true;
+    }
+  } catch {}
+}
 
 if (useProxy) {
   // ── Proxy mode: for native/non-npm Claude Code installs ───────────────────

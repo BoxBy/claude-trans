@@ -63,7 +63,15 @@ cts --use-proxy --model sonnet
 
 Proxy mode starts a local translating proxy server and routes Claude Code's API traffic through it. This bypasses the need for `NODE_OPTIONS` injection, making it compatible with native binary installs.
 
-| Feature | Default (npm) | Proxy Mode |
+To **set proxy as default**, run this inside Claude Code:
+
+```
+/ts-mode proxy
+```
+
+Or manually add `"mode": "proxy"` to `~/.claude/claude-trans.json`. After changing the mode, restart `cts` to apply.
+
+| Feature | Fetch (npm) | Proxy Mode |
 |---------|:---:|:---:|
 | Real-time SSE translation | ✓ | ✓ |
 | Statusline integration | ✓ | ✓ |
@@ -103,6 +111,7 @@ The following commands are automatically installed on session start and availabl
 | Command | Description |
 |--------|------|
 | `/ts-show` | Show translation status & toggle preview visibility (`on`/`off`) |
+| `/ts-mode` | Set translation mode (`fetch` or `proxy`) |
 | `/ts-provider` | Configure translation provider and set custom API keys |
 | `/ts-model` | Change translation model |
 | `/ts-lang` | Change translation target language |

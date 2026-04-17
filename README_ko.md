@@ -63,7 +63,15 @@ cts --use-proxy --model sonnet
 
 프록시 모드는 로컬 번역 프록시 서버를 시작하고 Claude Code의 API 트래픽이 이를 경유하도록 설정합니다.
 
-| 기능 | 기본 모드 (npm) | 프록시 모드 |
+**프록시 모드를 기본으로 설정**하려면 Claude Code 내에서 다음 명령어를 실행하세요:
+
+```
+/ts-mode proxy
+```
+
+또는 `~/.claude/claude-trans.json`에 `"mode": "proxy"`를 직접 추가합니다. 모드 변경 후 `cts`를 재시작하면 적용됩니다.
+
+| 기능 | Fetch 모드 (npm) | 프록시 모드 |
 |------|:---:|:---:|
 | 실시간 SSE 번역 | ✓ | ✓ |
 | 상태 표시줄 연동 | ✓ | ✓ |
@@ -103,6 +111,7 @@ Claude Code 안에서 `/ts-provider`를 실행하여 설정합니다. 입력된 
 | 명령어 | 설명 |
 |--------|------|
 | `/ts-show` | 번역 상태 확인 & 미리보기 표시 토글 (`on`/`off`) |
+| `/ts-mode` | 번역 모드 설정 (`fetch` 또는 `proxy`) |
 | `/ts-provider` | 번역 제공자(Provider)와 API KEY 재설정 |
 | `/ts-model` | 번역할 모델(Model) 지정 교체 |
 | `/ts-lang` | 타겟 번역 언어 변경 |
