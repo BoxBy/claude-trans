@@ -1,15 +1,16 @@
 ---
-description: Set the translation model (e.g., gemma-3-27b-it)
+description: Set the translation model
 ---
 
 # /ts-model [model]
 
-When the user invokes this command:
-
-1. If a `model` argument is provided, update the `model` and `custom_model` fields in `~/.claude/claude-trans.json` to the given model name.
-2. If no argument is provided, show the list of recommended models:
-   - `claude-3-5-haiku-20241022` (Claude Haiku)
-   - `gemma-3-27b-it` (Google Gemini)
-   - `gpt-4o-mini` (OpenAI)
-
-3. After updating, respond with: "Translation model changed to [model]."
+1. If a `model` argument is provided, set `model` to that value in `~/.claude/claude-trans.json`. Respond ONLY: "Model set to **{model}**."
+2. If no argument:
+   - Read `~/.claude/claude-trans.json` and check `backend`.
+   - If `backend` is `"custom"` and `custom_endpoint` exists, fetch models:
+     ```bash
+     node "$(npm root -g)/claude-trans/lib/fetch-models.cjs"
+     ```
+     Show results as AskUserQuestion options.
+   - Otherwise (claude backend), ask the user to type a model name. Recommended: `claude-haiku-4-5-20251001`.
+3. After updating, respond ONLY: "Model set to **{model}**."

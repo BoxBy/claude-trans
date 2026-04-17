@@ -128,7 +128,6 @@ function restoreSettings() {
     try {
         const settingsPath = path.join(claudeDir, "settings.json");
         const origPath = path.join(claudeDir, "claude-trans-orig-statusline.json");
-        const origApiUrlPath = path.join(claudeDir, "claude-trans-orig-api-url.json");
         const bridgePath = path.join(claudeDir, "claude-trans-statusline.cjs");
         const targetCmd = `node ${bridgePath.replace(/\\/g, "/")}`;
 
@@ -149,17 +148,16 @@ function restoreSettings() {
             }
 
             // Restore API URL
+            const origApiUrlPath = path.join(claudeDir, "claude-trans-orig-api-url.json");
             if (fs.existsSync(origApiUrlPath)) {
                 const urlBackup = JSON.parse(fs.readFileSync(origApiUrlPath, "utf8"));
                 if (settings.env) {
                     settings.env.ANTHROPIC_BASE_URL = urlBackup.ANTHROPIC_BASE_URL;
                 }
                 fs.unlinkSync(origApiUrlPath);
-                console.error("[claude-trans] Restored original API URL in settings.json");
             }
 
             fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
-            console.error("[claude-trans] Restored settings.json");
         }
     } catch (e) {
         console.error("[claude-trans] Failed to restore settings:", e.message);
@@ -198,7 +196,7 @@ if (useProxy) {
       } catch {}
     }
     if (!realApiUrl) realApiUrl = "https://api.anthropic.com";
-    const { createProxy } = require(path.join(__dirname, "..", "lib", "proxy-server.cjs"));
+    const { createProxy } = require(path.join(__dirname, "..", "lib", "modes", "proxy.cjs"));
     const server = createProxy(realApiUrl);
 
     server.listen(port, "127.0.0.1", async () => {
@@ -206,25 +204,17 @@ if (useProxy) {
 
       const proxyUrl = `http://localhost:${port}`;
 
-      // Patch settings.json env to point to our proxy (Claude Code reads settings.json env)
+      // Patch settings.json so Claude Code uses proxy
       try {
         if (fs.existsSync(settingsPath)) {
           const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
           if (settings.env?.ANTHROPIC_BASE_URL && settings.env.ANTHROPIC_BASE_URL !== proxyUrl) {
-            // Backup original API URL
             fs.writeFileSync(origApiUrlPath, JSON.stringify({ ANTHROPIC_BASE_URL: settings.env.ANTHROPIC_BASE_URL }), "utf8");
-            // Patch settings.json
             settings.env.ANTHROPIC_BASE_URL = proxyUrl;
             fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
-            console.error(`[claude-trans] Patched settings.json ANTHROPIC_BASE_URL → ${proxyUrl}`);
           }
         }
-      } catch (e) {
-        console.error(`[claude-trans] Failed to patch settings.json: ${e.message}`);
-      }
-
-      // Small delay to ensure settings.json write is flushed
-      await new Promise(r => setTimeout(r, 200));
+      } catch {}
 
       const proxyEnv = { ...process.env, ANTHROPIC_BASE_URL: proxyUrl };
       const child = spawn("claude", claudeArgs, { stdio: "inherit", shell: true, env: proxyEnv });
