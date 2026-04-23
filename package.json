@@ -27,12 +27,15 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/BoxBy/claude-ts.git"
+    "url": "git+https://github.com/BoxBy/claude-trans.git"
   },
   "bugs": {
-    "url": "https://github.com/BoxBy/claude-ts/issues"
+    "url": "https://github.com/BoxBy/claude-trans/issues"
   },
-  "homepage": "https://github.com/BoxBy/claude-ts#readme",
+  "homepage": "https://github.com/BoxBy/claude-trans#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "author": "BoxBy",
   "license": "MIT",
   "engines": {
