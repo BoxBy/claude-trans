@@ -4,7 +4,7 @@
 
 Transparent translation layer for Claude Code — interact in your language, while Claude reasons in English.
 
-[한국어](README_ko.md)
+[한국어](README_ko.md) · [GitHub](https://github.com/BoxBy/claude-ts) · [npm](https://www.npmjs.com/package/claude-trans)
 
 ## Motivation
 
@@ -21,7 +21,7 @@ npm install -g claude-trans
 
 *Requirements: [Node.js](https://nodejs.org/) (v18+) and [Claude Code CLI via npm](https://docs.anthropic.com/en/docs/claude-code) (`npm install -g @anthropic-ai/claude-code`)*
 
-> **Note:** The native installer (`curl -fsSL https://claude.ai/install.sh | bash`) is **not supported**. Claude Code must be installed via npm for the translation hook to work.
+> **Note:** The default mode requires Claude Code installed via npm. If you used the native installer, use `--use-proxy` flag (see below).
 
 ## Usage
 
@@ -48,6 +48,35 @@ cts --continue
 # Any other claude flags work as-is
 cts --allowedTools "Edit,Write,Bash" --model opus
 ```
+
+### Proxy Mode (`--use-proxy`)
+
+If you installed Claude Code via the **native installer** (`curl -fsSL https://claude.ai/install.sh | bash`) instead of npm, use the `--use-proxy` flag:
+
+```bash
+# Proxy mode — works with any Claude Code installation
+cts --use-proxy
+
+# Combined with other flags
+cts --use-proxy --model sonnet
+```
+
+Proxy mode starts a local translating proxy server and routes Claude Code's API traffic through it. This bypasses the need for `NODE_OPTIONS` injection, making it compatible with native binary installs.
+
+To **set proxy as default**, run this inside Claude Code:
+
+```
+/ts-mode proxy
+```
+
+Or manually add `"mode": "proxy"` to `~/.claude/claude-trans.json`. After changing the mode, restart `cts` to apply.
+
+| Feature | Fetch (npm) | Proxy Mode |
+|---------|:---:|:---:|
+| Real-time SSE translation | ✓ | ✓ |
+| Statusline integration | ✓ | ✓ |
+| Native installer support | ✗ | ✓ |
+| Slight overhead | — | minimal |
 
 ### Configuration
 
@@ -82,6 +111,7 @@ The following commands are automatically installed on session start and availabl
 | Command | Description |
 |--------|------|
 | `/ts-show` | Show translation status & toggle preview visibility (`on`/`off`) |
+| `/ts-mode` | Set translation mode (`fetch` or `proxy`) |
 | `/ts-provider` | Configure translation provider and set custom API keys |
 | `/ts-model` | Change translation model |
 | `/ts-lang` | Change translation target language |

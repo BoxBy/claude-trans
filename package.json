@@ -1,6 +1,6 @@
 {
   "name": "claude-trans",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Transparent translation layer for Claude Code — interact in your language, Claude reasons in English",
   "main": "lib/index.cjs",
   "bin": {
@@ -25,7 +25,18 @@
     "README_ko.md",
     "LICENSE"
   ],
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BoxBy/claude-trans.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BoxBy/claude-trans/issues"
+  },
+  "homepage": "https://github.com/BoxBy/claude-trans#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "BoxBy",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
